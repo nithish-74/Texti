@@ -244,8 +244,6 @@ All tests use synthetic in-memory data — no real files, no network, no keychai
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
-
 ---
 
 *Built as a demonstration of a privacy-preserving, fully local media-to-text pipeline.*
