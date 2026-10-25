@@ -3,7 +3,7 @@
 > **Local-first search for your OneDrive media** — turns images, PDFs, audio, and video into fully searchable, privacy-classified text, entirely on your own device.
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 [![Tests](https://img.shields.io/badge/tests-158%20passed-brightgreen)](#development)
 
 ---
