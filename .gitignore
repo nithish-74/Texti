@@ -1,0 +1,36 @@
+# Environments & Secrets
+.env
+*.env
+*.key
+*.pem
+
+# Python & Build artifacts
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local data & databases
+*.db
+*.sqlite
+*.sqlite3
+config.json
+config.json.bad
+
+# IDE & OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Local test datasets (synthetic)
+real_test/

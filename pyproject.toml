@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "texti"
+version = "0.1.0"
+description = "Local-first tool that turns OneDrive images and PDFs into searchable text locally"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "msal>=1.20.0",
+    "keyring>=24.0.0",
+    "PyMuPDF>=1.23.0",
+    "pytesseract>=0.3.10",
+    "Pillow>=10.0.0",
+    "numpy>=1.24.0",
+    "cryptography>=41.0.0",
+    "sentence-transformers>=2.2.0",
+    "soundfile>=0.12.0",
+    "av>=10.0.0",
+]
+
+
+[project.optional-dependencies]
+# tiktoken downloads its vocabulary from the internet on first use, so it is opt-in
+# (set "use_tiktoken": true in config.json after installing it).
+tiktoken = ["tiktoken>=0.5.0"]
+dev = ["pytest>=7.0.0"]
+
+[project.scripts]
+texti = "texti.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
