@@ -55,7 +55,7 @@ def read_audio_frames(path: Path | str, target_sr: int = TARGET_SAMPLE_RATE) -> 
                 ).astype(np.float32)
             return data.astype(np.float32), duration
         except Exception as e:
-            log.debug("soundfile failed to decode %s (%s), falling back to PyAV", p.name, e)
+            log.debug("soundfile could not decode this file (%s), falling back to PyAV", type(e).__name__)
 
     # PyAV path: decodes container audio streams from video or complex audio formats
     try:
@@ -66,7 +66,7 @@ def read_audio_frames(path: Path | str, target_sr: int = TARGET_SAMPLE_RATE) -> 
     try:
         container = av.open(str(p))
     except Exception as e:
-        raise AudioExtractionError(f"Failed to open media container {p.name}: {e}") from e
+        raise AudioExtractionError(f"Failed to open the media container ({type(e).__name__})") from e
 
     audio_stream = next((s for s in container.streams if s.type == "audio"), None)
     if audio_stream is None:
@@ -162,7 +162,7 @@ def extract_audio(
     try:
         result = pipe({"sampling_rate": TARGET_SAMPLE_RATE, "raw": samples}, generate_kwargs=generate_kwargs)
     except Exception as e:
-        log.warning("Whisper transcription failed for %s: %s", Path(path).name, e)
+        log.warning("Whisper transcription failed (%s)", type(e).__name__)
         return [], pages
 
     segments: list[Segment] = []

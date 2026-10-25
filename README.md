@@ -1,9 +1,11 @@
 # Texti 🔍
 
+> **Status: working prototype.** Tested by its author on about 55 real OneDrive files. It is a developer tool today: no desktop app or browser extension yet.
+
 > **Local-first search for your OneDrive media** — turns images, PDFs, audio, and video into fully searchable, privacy-classified text, entirely on your own device.
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 [![Tests](https://img.shields.io/badge/tests-158%20passed-brightgreen)](#development)
 
 ---
@@ -40,14 +42,14 @@ All your data stays on your machine. Here is exactly what is stored where:
 | Data | Location | Protection |
 |------|----------|------------|
 | Extracted text, paths, embeddings | `~/.texti/data/tier{1,2,3}.db` | AES-GCM encrypted, one key per tier |
-| Encryption keys + MS sign-in tokens | OS keychain (`keyring`) | OS-managed, never written to disk |
+| Encryption keys + MS sign-in tokens | OS keychain (`keyring`) | Managed by your OS (for example Windows Credential Manager) |
 | Original files | OneDrive only | Downloaded to a temp folder, **deleted immediately** after processing |
 | File bookkeeping (IDs, hashes, timestamps) | `~/.texti/data/meta.db` | No filenames, paths, or text stored |
 
 **Network access is limited to:**
 
 1. **Microsoft Graph** — sign-in, folder listing, and file download. Read-only (`Files.Read`).
-2. **One-time model download** via `texti fetch-model` — pulls public model weights from Hugging Face. No personal data is ever sent.
+2. **One-time downloads** that you start yourself with `texti fetch-model` — the embedding model and the Whisper speech model from Hugging Face, and the Hindi and Telugu OCR language data from the Tesseract project's GitHub repository. No personal data is ever sent. After that, everything runs offline.
 
 > No telemetry. No external AI API. Log output contains only opaque IDs, counts, and timings — never file names or text.
 
@@ -112,7 +114,7 @@ export TEXTI_CLIENT_ID="your-client-id-here"
 # On Windows (PowerShell):
 # $env:TEXTI_CLIENT_ID = "your-client-id-here"
 
-# 4. Download the embedding model (one-time, ~90 MB)
+# 4. Download the models (one-time, a few hundred MB)
 texti fetch-model
 
 # 5. Verify your setup
@@ -138,7 +140,7 @@ texti [-v] <command> [options]
 | `texti search "<question>"` | Search indexed content within a token budget |
 | `texti report` | Show file counts per tier, chunk stats, processing speed, and token savings |
 | `texti forget --all` | Wipe all indexes, keys, tokens, and settings from this machine |
-| `texti fetch-model` | Download the semantic embedding model from Hugging Face |
+| `texti fetch-model` | Download the embedding and speech models, and Hindi/Telugu OCR data |
 | `texti doctor` | Check system readiness: client ID, Tesseract, language packs, models, keychain |
 
 ### Search options
@@ -150,7 +152,7 @@ texti search "invoice from March" --budget 800 --tiers 1
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--budget N` | 800 | Maximum tokens to return |
-| `--tiers N [N...]` | 1 2 3 | Tiers to include in results |
+| `--tiers LIST` | `1` | Comma-separated tiers to include, for example `--tiers 1,2,3`. Tiers 2 and 3 ask for your approval |
 
 Search returns **one-line summaries** for the best matching files first, then **full chunk text** until the token budget is consumed. Low-confidence OCR results are flagged so you know to verify the original file.
 
@@ -164,14 +166,13 @@ Texti uses a **hybrid retrieval** strategy that combines two approaches:
 Query
   |-- BM25 keyword scoring   (exact matches: invoice numbers, IDs, code)
   `-- Dense vector search    (semantic matches: "money transfer" ~ "wire payment")
-         |-- all-MiniLM-L6-v2  (English)
-         `-- paraphrase-multilingual-MiniLM-L12-v2  (Hindi / Telugu / others)
+         `-- paraphrase-multilingual-MiniLM-L12-v2  (multilingual embedding model)
                 |
                 v
          Fused rank score -> top-K chunks -> token budget filter -> results
 ```
 
-The `hybrid_weight` config value controls the BM25 vs. dense split (default: `0.5`, equal weight).
+The `hybrid_weight` config value controls the BM25 vs. dense split (default: `0.3`, so 30% keyword and 70% semantic). Identical copies of a file are returned once.
 
 ---
 
@@ -187,13 +188,13 @@ Texti/
 |   +-- tokens.py               # Token counting and budget management
 |   |
 |   +-- onedrive/
-|   |   +-- auth.py             # MSAL device-code + token refresh
+|   |   +-- auth.py             # MSAL interactive sign-in (PKCE) + token refresh
 |   |   +-- graph.py            # Microsoft Graph API client
 |   |   `-- sync.py             # Delta sync and file download
 |   |
 |   +-- extract/
 |   |   +-- ocr.py              # Tesseract OCR (multi-language)
-|   |   +-- pdf.py              # Native PDF text extraction (pdfminer)
+|   |   +-- pdf.py              # PDF text (PyMuPDF); scanned pages go through OCR
 |   |   `-- audio.py            # Whisper speech-to-text via PyAV
 |   |
 |   +-- privacy/
@@ -238,13 +239,16 @@ All tests use synthetic in-memory data — no real files, no network, no keychai
 - **OCR accuracy**: Misread characters can cause detectors to miss sensitive values. Folder rules and identity-wording detection act as a second line of defence, but review your tier assignments manually.
 - **Processing speed**: OCR and speech transcription are compute-intensive. A GPU helps significantly for large batches.
 - **OneDrive for Business delta**: Folder-level delta is not available on all drives. When unavailable, the full folder is scanned on each sync. Unchanged files are skipped by hash (no re-download), but deletions are not detected until the next full scan.
+- **Search is only as good as the text**: a 12-digit number that fails the Aadhaar checksum is not masked (it still stays in Tier 2), and wording such as "student ID" sends a page to Tier 3, so some harmless pages will ask for approval.
+- **Speech transcription**: gives no real confidence score, so a bad transcript is not flagged. It has not been tested on long recordings or noisy audio, and it is weaker on Telugu and Hindi.
+- **Languages**: tested mostly on English. Telugu and Hindi OCR are supported but lightly tested.
 - **Whisper model size**: `texti fetch-model` downloads `whisper-tiny` by default. Accuracy improves with larger models (`base`, `small`), which can be configured manually.
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT. See the `LICENSE` file.
 
 ---
 

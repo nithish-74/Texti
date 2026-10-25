@@ -86,6 +86,20 @@ def search(
     if not candidates:
         return SearchResult([], 0, 0, 0, notes)
 
+    # The same file is often stored twice (a "- Copy" folder, a re-download). Identical text gives an
+    # identical embedding, so keep one copy: duplicates waste the budget and inflate "tokens saved".
+    seen: set[tuple] = set()
+    unique: list[Candidate] = []
+    for c in candidates:
+        key = (c.tier, c.level, c.token_count, c.embedding.tobytes())
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(c)
+    if len(unique) < len(candidates):
+        notes.append(f"{len(candidates) - len(unique)} duplicate copy(ies) of the same text were hidden.")
+    candidates = unique
+
     matrix = np.vstack([c.embedding for c in candidates])
     dense_scores = matrix @ q
 
